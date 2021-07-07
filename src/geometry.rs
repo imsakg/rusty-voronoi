@@ -1,4 +1,11 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+impl Bounds {
+ pub fn width(self)->f64 {self.max.x-self.min.x}
+ pub fn height(self)->f64 {self.max.y-self.min.y}
+ pub fn area(self)->f64 {self.width()*self.height()}
+ pub fn contains(self,p:Point)->bool { p.x>=self.min.x && p.x<=self.max.x && p.y>=self.min.y && p.y<=self.max.y }
+ pub fn corners(self)->Vec<Point> {vec![self.min,Point::new(self.max.x,self.min.y),self.max,Point::new(self.min.x,self.max.y)]}
+}
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Bounds { min: Point, max: Point }
 impl Bounds {
