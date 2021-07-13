@@ -1,4 +1,9 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn signed_area(points:&[Point])->f64 {
+ if points.len()<3 {return 0.;}
+ let o=points[0]; points.iter().zip(points.iter().cycle().skip(1)).take(points.len()).map(|(a,b)|(a.x-o.x)*(b.y-o.y)-(b.x-o.x)*(a.y-o.y)).sum::<f64>()*0.5
+}
+pub fn polygon_area(points:&[Point])->f64 {signed_area(points).abs()}
 impl Bounds {
  pub fn width(self)->f64 {self.max.x-self.min.x}
  pub fn height(self)->f64 {self.max.y-self.min.y}
