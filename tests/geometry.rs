@@ -1,4 +1,5 @@
 // Behavioral geometry tests.
+#[test] fn orientation_distinguishes_turns() { let a=Point::new(0.,0.); let b=Point::new(2.,0.); assert_eq!(orientation(a,b,Point::new(0.,1.)),2.); assert!(orientation(a,b,Point::new(0.,-1.))<0.); assert_eq!(orientation(a,b,Point::new(4.,0.)),0.); }
 #[test] fn shoelace_area_handles_winding_and_empty_input() { let p=Bounds::new(0.,0.,4.,3.).unwrap().corners(); assert_eq!(signed_area(&p),12.); let r:Vec<_>=p.iter().rev().copied().collect(); assert_eq!(signed_area(&r),-12.); assert_eq!(polygon_area(&r),12.); assert_eq!(polygon_area(&[]),0.); }
 #[test] fn rectangle_geometry_is_counterclockwise() { let b=Bounds::new(-1.,-2.,3.,4.).unwrap(); assert_eq!(b.width(),4.); assert_eq!(b.height(),6.); assert_eq!(b.area(),24.); assert!(b.contains(Point::new(3.,4.))); assert!(!b.contains(Point::new(4.,4.))); assert_eq!(b.corners()[0],Point::new(-1.,-2.)); }
 use rusty_voronoi::geometry::*;
