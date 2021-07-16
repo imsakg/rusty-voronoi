@@ -1,4 +1,9 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn orientation(a:Point,b:Point,c:Point)->f64 {(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)}
+impl Point {
+ pub fn is_finite(self)->bool {self.x.is_finite()&&self.y.is_finite()}
+ pub fn lerp(self,other:Self,t:f64)->Self {Self::new(self.x+(other.x-self.x)*t,self.y+(other.y-self.y)*t)}
+}
 pub fn signed_area(points:&[Point])->f64 {
  if points.len()<3 {return 0.;}
  let o=points[0]; points.iter().zip(points.iter().cycle().skip(1)).take(points.len()).map(|(a,b)|(a.x-o.x)*(b.y-o.y)-(b.x-o.x)*(a.y-o.y)).sum::<f64>()*0.5
