@@ -1,4 +1,13 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn centroid(points:&[Point])->Option<Point> {
+ let area=signed_area(points); if area.abs()<=f64::EPSILON {return None;}
+ let o=points[0]; let mut x=0.; let mut y=0.;
+ for (a,b) in points.iter().zip(points.iter().cycle().skip(1)).take(points.len()) {
+  let cross=(a.x-o.x)*(b.y-o.y)-(b.x-o.x)*(a.y-o.y);
+  x+=((a.x-o.x)+(b.x-o.x))*cross; y+=((a.y-o.y)+(b.y-o.y))*cross;
+ }
+ Some(Point::new(o.x+x/(6.*area),o.y+y/(6.*area)))
+}
 pub fn orientation(a:Point,b:Point,c:Point)->f64 {(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)}
 impl Point {
  pub fn is_finite(self)->bool {self.x.is_finite()&&self.y.is_finite()}
