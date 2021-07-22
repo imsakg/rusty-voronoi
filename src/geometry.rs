@@ -1,4 +1,10 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn convex_contains(points:&[Point],p:Point,epsilon:f64)->bool {
+ if points.len()<3 || !p.is_finite() {return false;}
+ let mut positive=false; let mut negative=false;
+ for (a,b) in points.iter().zip(points.iter().cycle().skip(1)).take(points.len()) {let c=orientation(*a,*b,p); positive|=c>epsilon; negative|=c< -epsilon;}
+ !(positive&&negative)
+}
 pub fn centroid(points:&[Point])->Option<Point> {
  let area=signed_area(points); if area.abs()<=f64::EPSILON {return None;}
  let o=points[0]; let mut x=0.; let mut y=0.;
