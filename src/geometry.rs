@@ -1,4 +1,19 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn clip_halfplane(polygon:&[Point],normal:Point,offset:f64)->Vec<Point> {
+ clip_signed(polygon,|p|normal.x*p.x+normal.y*p.y-offset)
+}
+fn clip_signed(polygon:&[Point],signed:impl Fn(Point)->f64)->Vec<Point> {
+ let mut out=Vec::new(); if polygon.is_empty() {return out;}
+ let mut previous=*polygon.last().unwrap(); let mut dp=signed(previous);
+ for &current in polygon {let dc=signed(current);
+  if (dp<=0.)!=(dc<=0.) {out.push(previous.lerp(current,dp/(dp-dc)));}
+  if dc<=0. {out.push(current);}
+  previous=current;dp=dc;
+ }
+ out.dedup_by(|a,b|a.distance2(*b)<=1e-24);
+ if out.len()>1 && out[0].distance2(*out.last().unwrap())<=1e-24 {out.pop();}
+ out
+}
 pub fn convex_contains(points:&[Point],p:Point,epsilon:f64)->bool {
  if points.len()<3 || !p.is_finite() {return false;}
  let mut positive=false; let mut negative=false;
