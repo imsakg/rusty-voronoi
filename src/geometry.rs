@@ -1,4 +1,8 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn clip_bisector(polygon:&[Point],owner:Point,other:Point)->Vec<Point> {
+ let n=Point::new(other.x-owner.x,other.y-owner.y);let mid=owner.lerp(other,0.5);
+ clip_signed(polygon,|p|n.x*(p.x-mid.x)+n.y*(p.y-mid.y))
+}
 pub fn clip_halfplane(polygon:&[Point],normal:Point,offset:f64)->Vec<Point> {
  clip_signed(polygon,|p|normal.x*p.x+normal.y*p.y-offset)
 }
