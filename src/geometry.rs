@@ -1,4 +1,11 @@
 //! Basic Euclidean geometry used by clipping and the sweep.
+pub fn circumcircle(a:Point,b:Point,c:Point)->Option<(Point,f64)> {
+ let bx=b.x-a.x;let by=b.y-a.y;let cx=c.x-a.x;let cy=c.y-a.y;
+ let d=2.*(bx*cy-by*cx); if d.abs()<=f64::EPSILON*(bx.abs()+by.abs())*(cx.abs()+cy.abs()) {return None;}
+ let bb=bx*bx+by*by;let cc=cx*cx+cy*cy;
+ let center=Point::new(a.x+(cy*bb-by*cc)/d,a.y+(bx*cc-cx*bb)/d);
+ let r=center.distance2(a).sqrt(); if center.is_finite()&&r.is_finite() {Some((center,r))}else{None}
+}
 pub fn clip_bisector(polygon:&[Point],owner:Point,other:Point)->Vec<Point> {
  let n=Point::new(other.x-owner.x,other.y-owner.y);let mid=owner.lerp(other,0.5);
  clip_signed(polygon,|p|n.x*(p.x-mid.x)+n.y*(p.y-mid.y))
