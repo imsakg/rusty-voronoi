@@ -1,4 +1,5 @@
 // Behavioral diagram tests.
+#[test] fn insertion_clips_existing_cells_incrementally() {let mut d=Diagram::build(vec![Point::new(2.,5.)],bounds()).unwrap();assert_eq!(d.insert(Point::new(8.,5.)).unwrap(),1);assert_eq!(d.cells()[0].area(),50.);assert_eq!(d.cells()[1].area(),50.);assert_eq!(d.insert(Point::new(8.,5.)).unwrap(),1);assert_eq!(d.cells().len(),2);let before=d.cells().to_vec();assert!(d.insert(Point::new(-1.,0.)).is_err());assert_eq!(d.cells(),before);}
 #[test] fn duplicate_sites_do_not_double_count_area() {let a=Point::new(2.,5.);let d=Diagram::build(vec![a,Point::new(8.,5.),a],bounds()).unwrap();assert_eq!(d.sites().len(),2);assert_eq!(d.cells().iter().map(|c|c.area()).sum::<f64>(),100.);}
 #[test] fn invalid_sites_are_rejected() {assert!(Diagram::build(vec![Point::new(f64::NAN,0.)],bounds()).is_err());assert!(Diagram::build(vec![Point::new(-1.,0.)],bounds()).is_err());}
 use rusty_voronoi::{Diagram,geometry::{Point,Bounds}};
