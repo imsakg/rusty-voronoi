@@ -1,4 +1,13 @@
 //! Bounded polygon cells and incremental edits.
+impl Diagram {
+ pub fn insert(&mut self,point:Point)->Result<usize,&'static str> {
+  if !point.is_finite()||!self.bounds.contains(point) {return Err("site must be finite and inside the bounds");}
+  if let Some(i)=self.sites.iter().position(|p|*p==point){return Ok(i);}
+  let id=self.sites.len();let mut vertices=self.bounds.corners();
+  for cell in &mut self.cells {let other=self.sites[cell.site];cell.vertices=clip_bisector(&cell.vertices,other,point);vertices=clip_bisector(&vertices,point,other);}
+  self.sites.push(point);self.cells.push(Cell{site:id,vertices});Ok(id)
+ }
+}
 use crate::geometry::*;
 #[derive(Debug,Clone,PartialEq)]
 pub struct Cell {pub site:usize,pub vertices:Vec<Point>}
