@@ -1,5 +1,12 @@
 //! Bounded polygon cells and incremental edits.
 impl Diagram {
+ /// Remove a canonical site; higher site indices are compacted.
+ pub fn remove(&mut self,index:usize)->bool {
+  if index>=self.sites.len(){return false;}
+  let mut sites=self.sites.clone();sites.remove(index);*self=Self::build(sites,self.bounds).expect("retained sites were validated");true
+ }
+}
+impl Diagram {
  pub fn insert(&mut self,point:Point)->Result<usize,&'static str> {
   if !point.is_finite()||!self.bounds.contains(point) {return Err("site must be finite and inside the bounds");}
   if let Some(i)=self.sites.iter().position(|p|*p==point){return Ok(i);}
