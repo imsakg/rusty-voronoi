@@ -1,5 +1,11 @@
 //! Bounded polygon cells and incremental edits.
 impl Diagram {
+ pub fn locate(&self,point:Point)->Option<usize> {
+  if !point.is_finite()||!self.bounds.contains(point){return None;}
+  self.sites.iter().enumerate().min_by(|(i,a),(j,b)|a.distance2(point).total_cmp(&b.distance2(point)).then(i.cmp(j))).map(|(i,_)|i)
+ }
+}
+impl Diagram {
  /// Remove a canonical site; higher site indices are compacted.
  pub fn remove(&mut self,index:usize)->bool {
   if index>=self.sites.len(){return false;}
