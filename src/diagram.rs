@@ -1,4 +1,20 @@
 //! Bounded polygon cells and incremental edits.
+#[derive(Debug,Clone,Copy,PartialEq)]
+pub struct Edge {pub start:Point,pub end:Point,pub left:usize,pub right:Option<usize>}
+impl Edge {pub fn length(self)->f64 {self.start.distance2(self.end).sqrt()}}
+impl Diagram {
+ pub fn edges(&self)->Vec<Edge> {
+  let tolerance=1e-8*self.bounds.width().hypot(self.bounds.height()).powi(2).max(1.);
+  let mut edges=Vec::new();for cell in &self.cells {
+   for (&start,&end) in cell.vertices.iter().zip(cell.vertices.iter().cycle().skip(1)).take(cell.vertices.len()) {
+    if start.distance2(end)<=1e-24 {continue;}
+    let mid=start.lerp(end,0.5);let owner=self.sites[cell.site];
+    let right=self.sites.iter().enumerate().filter(|(j,_)|*j!=cell.site).find(|(_,p)|(mid.distance2(**p)-mid.distance2(owner)).abs()<=tolerance).map(|(j,_)|j);
+    if right.is_none_or(|j|cell.site<j) {edges.push(Edge{start,end,left:cell.site,right});}
+   }
+  }edges
+ }
+}
 impl Diagram {
  pub fn locate(&self,point:Point)->Option<usize> {
   if !point.is_finite()||!self.bounds.contains(point){return None;}
