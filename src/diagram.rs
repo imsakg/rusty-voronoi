@@ -1,4 +1,9 @@
 //! Bounded polygon cells and incremental edits.
+impl Diagram {
+ pub fn neighbors(&self,index:usize)->Vec<usize> {let mut out=Vec::new();for e in self.edges(){if let Some(r)=e.right {if e.left==index {out.push(r);}else if r==index{out.push(e.left);}}}out.sort_unstable();out.dedup();out}
+ /// Bounded dual adjacency, excluding zero-length cocircular contacts.
+ pub fn delaunay_edges(&self)->Vec<(usize,usize)> {let mut pairs:Vec<_>=self.edges().into_iter().filter_map(|e|e.right.map(|r|(e.left,r))).collect();pairs.sort_unstable();pairs.dedup();pairs}
+}
 #[derive(Debug,Clone,Copy,PartialEq)]
 pub struct Edge {pub start:Point,pub end:Point,pub left:usize,pub right:Option<usize>}
 impl Edge {pub fn length(self)->f64 {self.start.distance2(self.end).sqrt()}}
