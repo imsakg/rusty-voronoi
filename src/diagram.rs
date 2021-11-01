@@ -1,5 +1,19 @@
 //! Bounded polygon cells and incremental edits.
 impl Diagram {
+ pub fn validate(&self,tolerance:f64)->Result<(),&'static str> {
+  if !tolerance.is_finite()||tolerance<0. {return Err("invalid tolerance");}
+  if self.sites.is_empty(){return Ok(());}
+  let scale=self.bounds.area().max(1.);
+  if (self.cells.iter().map(Cell::area).sum::<f64>()-self.bounds.area()).abs()>tolerance*scale {return Err("cell area does not cover bounds");}
+  for cell in &self.cells {for &v in &cell.vertices {
+   if !v.is_finite() {return Err("nonfinite cell vertex");}
+   let margin=tolerance*self.bounds.width().max(self.bounds.height()).max(1.);
+   if v.x<self.bounds.min().x-margin||v.y<self.bounds.min().y-margin||v.x>self.bounds.max().x+margin||v.y>self.bounds.max().y+margin {return Err("cell vertex outside bounds");}
+   let owner=self.sites[cell.site];if self.sites.iter().any(|&p|v.distance2(owner)>v.distance2(p)+tolerance*scale){return Err("vertex violates nearest-site ownership");}
+  }}Ok(())
+ }
+}
+impl Diagram {
  pub fn neighbors(&self,index:usize)->Vec<usize> {let mut out=Vec::new();for e in self.edges(){if let Some(r)=e.right {if e.left==index {out.push(r);}else if r==index{out.push(e.left);}}}out.sort_unstable();out.dedup();out}
  /// Bounded dual adjacency, excluding zero-length cocircular contacts.
  pub fn delaunay_edges(&self)->Vec<(usize,usize)> {let mut pairs:Vec<_>=self.edges().into_iter().filter_map(|e|e.right.map(|r|(e.left,r))).collect();pairs.sort_unstable();pairs.dedup();pairs}
