@@ -1,4 +1,9 @@
 //! Bounded polygon cells and incremental edits.
+impl Cell {
+ pub fn centroid(&self)->Option<Point> {centroid(&self.vertices)}
+ pub fn perimeter(&self)->f64 {self.vertices.iter().zip(self.vertices.iter().cycle().skip(1)).take(self.vertices.len()).map(|(a,b)|a.distance2(*b).sqrt()).sum()}
+ pub fn contains(&self,point:Point)->bool {convex_contains(&self.vertices,point,1e-9)}
+}
 impl Diagram {
  pub fn validate(&self,tolerance:f64)->Result<(),&'static str> {
   if !tolerance.is_finite()||tolerance<0. {return Err("invalid tolerance");}
