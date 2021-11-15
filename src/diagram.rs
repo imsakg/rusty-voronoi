@@ -1,4 +1,9 @@
 //! Bounded polygon cells and incremental edits.
+impl Diagram {
+ pub fn relax(&self,iterations:usize)->Result<Self,&'static str> {
+  let mut diagram=self.clone();for _ in 0..iterations {let sites=diagram.cells.iter().map(|c|c.centroid().unwrap_or(diagram.sites[c.site])).collect();diagram=Self::build(sites,self.bounds)?;}Ok(diagram)
+ }
+}
 impl Cell {
  pub fn centroid(&self)->Option<Point> {centroid(&self.vertices)}
  pub fn perimeter(&self)->f64 {self.vertices.iter().zip(self.vertices.iter().cycle().skip(1)).take(self.vertices.len()).map(|(a,b)|a.distance2(*b).sqrt()).sum()}
