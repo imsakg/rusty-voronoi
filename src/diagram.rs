@@ -1,4 +1,12 @@
 //! Bounded polygon cells and incremental edits.
+/// Incremental construction retaining a queryable diagram after every push.
+pub struct Builder {diagram:Diagram}
+impl Builder {
+ pub fn new(bounds:Bounds)->Self {Self{diagram:Diagram{sites:Vec::new(),cells:Vec::new(),bounds}}}
+ pub fn push(&mut self,point:Point)->Result<usize,&'static str> {self.diagram.insert(point)}
+ pub fn diagram(&self)->&Diagram {&self.diagram}
+ pub fn finish(self)->Diagram {self.diagram}
+}
 impl Diagram {
  pub fn relax(&self,iterations:usize)->Result<Self,&'static str> {
   let mut diagram=self.clone();for _ in 0..iterations {let sites=diagram.cells.iter().map(|c|c.centroid().unwrap_or(diagram.sites[c.site])).collect();diagram=Self::build(sites,self.bounds)?;}Ok(diagram)
