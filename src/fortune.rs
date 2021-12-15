@@ -1,4 +1,13 @@
 //! Fortune's descending sweep and checked bounded-cell construction.
+pub fn breakpoint(left:Point,right:Point,directrix:f64)->f64 {
+ if (left.y-right.y).abs()<=f64::EPSILON {return (left.x+right.x)*0.5;}
+ if (left.y-directrix).abs()<=f64::EPSILON {return left.x;}
+ if (right.y-directrix).abs()<=f64::EPSILON {return right.x;}
+ let dl=left.y-directrix;let dr=right.y-directrix;let dx=right.x-left.x;
+ let a=0.5/dl-0.5/dr;let b=dx/dr;let c=(left.y-right.y)*0.5-dx*dx/(2.*dr);
+ let root=(b*b-4.*a*c).max(0.).sqrt();let x1=(-b-root)/(2.*a)+left.x;let x2=(-b+root)/(2.*a)+left.x;
+ if left.y<right.y {x1.max(x2)}else{x1.min(x2)}
+}
 pub fn parabola_y(focus:Point,directrix:f64,x:f64)->Option<f64> {
  let dy=focus.y-directrix;if dy.abs()<=f64::EPSILON {None}else{Some((focus.y+directrix)*0.5+(x-focus.x).powi(2)/(2.*dy))}
 }
