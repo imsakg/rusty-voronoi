@@ -1,4 +1,20 @@
 //! Fortune's descending sweep and checked bounded-cell construction.
+#[derive(Debug,Clone,Default)]
+pub struct Sweep {pub pairs:Vec<(usize,usize)>,pub vertices:Vec<Point>,pub site_events:usize,pub circle_events:usize,pub discarded_events:usize}
+#[derive(Clone,Copy)]
+struct Arc {site:usize,id:usize}
+fn add_pair(pairs:&mut std::collections::BTreeSet<(usize,usize)>,a:usize,b:usize) {if a!=b {pairs.insert((a.min(b),a.max(b)));}}
+pub fn sweep(sites:&[Point])->Result<Sweep,&'static str> {
+ let mut beach:Vec<Arc>=Vec::new();let mut pairs=std::collections::BTreeSet::new();let mut result=Sweep::default();let mut next_id=0;
+ for site in site_order(sites)? {
+  let p=sites[site];result.site_events+=1;
+  if beach.is_empty(){beach.push(Arc{site,id:next_id});next_id+=1;continue;}
+  if beach.iter().all(|a|sites[a.site].y==p.y) {let pos=beach.iter().position(|a|sites[a.site].x>p.x).unwrap_or(beach.len());if pos>0{add_pair(&mut pairs,beach[pos-1].site,site);}if pos<beach.len(){add_pair(&mut pairs,beach[pos].site,site);}beach.insert(pos,Arc{site,id:next_id});next_id+=1;continue;}
+  let index=(0..beach.len().saturating_sub(1)).find(|&i|p.x<=breakpoint(sites[beach[i].site],sites[beach[i+1].site],p.y)).unwrap_or(beach.len()-1);
+  let old=beach[index];add_pair(&mut pairs,old.site,site);beach.splice(index..=index,[old,Arc{site,id:next_id},Arc{site:old.site,id:next_id+1}]);next_id+=2;
+ }
+ result.pairs=pairs.into_iter().collect();Ok(result)
+}
 pub fn breakpoint(left:Point,right:Point,directrix:f64)->f64 {
  if (left.y-right.y).abs()<=f64::EPSILON {return (left.x+right.x)*0.5;}
  if (left.y-directrix).abs()<=f64::EPSILON {return left.x;}
