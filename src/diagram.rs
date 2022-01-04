@@ -1,4 +1,16 @@
 //! Bounded polygon cells and incremental edits.
+impl Diagram {
+ pub(crate) fn checked_candidates(sites:Vec<Point>,bounds:Bounds,pairs:&[(usize,usize)])->Result<(Self,usize),&'static str> {
+  let mut result=Self{sites,cells:Vec::new(),bounds};let mut repairs=0;
+  for (i,&owner) in result.sites.iter().enumerate() {
+   let mut vertices=bounds.corners();for &(a,b) in pairs {if a==i{vertices=clip_bisector(&vertices,owner,result.sites[b]);}else if b==i{vertices=clip_bisector(&vertices,owner,result.sites[a]);}}
+   for (j,&other) in result.sites.iter().enumerate() {if i==j {continue;}let n=Point::new(other.x-owner.x,other.y-owner.y);let mid=owner.lerp(other,0.5);
+    if vertices.iter().any(|p|n.x*(p.x-mid.x)+n.y*(p.y-mid.y)>0.) {vertices=clip_bisector(&vertices,owner,other);repairs+=1;}
+   }
+   result.cells.push(Cell{site:i,vertices});
+  }Ok((result,repairs))
+ }
+}
 /// Incremental construction retaining a queryable diagram after every push.
 pub struct Builder {diagram:Diagram}
 impl Builder {

@@ -1,4 +1,15 @@
 //! Fortune's descending sweep and checked bounded-cell construction.
+#[derive(Debug,Clone,Default)]
+pub struct BuildStats {pub site_events:usize,pub circle_events:usize,pub discarded_events:usize,pub candidate_edges:usize,pub repaired_constraints:usize}
+/// Build bounded cells using sweep candidates plus certified missing constraints.
+pub fn build(sites:Vec<Point>,bounds:Bounds)->Result<(crate::Diagram,BuildStats),&'static str> {
+ if sites.iter().any(|p|!p.is_finite()||!bounds.contains(*p)){return Err("sites must be finite and inside bounds");}
+ let mut unique=Vec::new();for p in sites{if !unique.contains(&p){unique.push(p);}}
+ let scale=bounds.width().max(bounds.height());let origin=bounds.min();
+ let normalized:Vec<_>=unique.iter().map(|p|Point::new((p.x-origin.x)/scale,(p.y-origin.y)/scale)).collect();
+ let sweep=sweep(&normalized)?;let (diagram,repairs)=crate::Diagram::checked_candidates(unique,bounds,&sweep.pairs)?;
+ let stats=BuildStats{site_events:sweep.site_events,circle_events:sweep.circle_events,discarded_events:sweep.discarded_events,candidate_edges:sweep.pairs.len(),repaired_constraints:repairs};Ok((diagram,stats))
+}
 pub fn breakpoint(left:Point,right:Point,directrix:f64)->f64 {
  if (left.y-right.y).abs()<=f64::EPSILON {return (left.x+right.x)*0.5;}
  if (left.y-directrix).abs()<=f64::EPSILON {return left.x;}
