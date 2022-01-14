@@ -1,4 +1,5 @@
 // Behavioral render tests.
+#[test] fn svg_options_escape_titles_and_control_layers() {let opts=SvgOptions{title:"<sites & cells>".into(),show_sites:false,show_labels:true,show_dual:true,..Default::default()};let s=svg_with_options(&diagram(),&opts).unwrap();assert!(s.contains("&lt;sites &amp; cells&gt;"));assert!(!s.contains("<circle "));assert_eq!(s.matches("<text ").count(),2);assert!(s.contains("data-layer=\"dual\""));let bad=SvgOptions{width:0,..Default::default()};assert!(svg_with_options(&diagram(),&bad).is_err());}
 use rusty_voronoi::{Diagram,geometry::{Point,Bounds},render::*};
 fn diagram()->Diagram {Diagram::build(vec![Point::new(2.,3.),Point::new(8.,7.)],Bounds::new(0.,0.,10.,10.).unwrap()).unwrap()}
 #[test] fn svg_has_cells_sites_and_a_valid_root() {let svg=svg(&diagram()).unwrap();assert!(svg.starts_with("<svg xmlns="));assert_eq!(svg.matches("<polygon ").count(),2);assert_eq!(svg.matches("<circle ").count(),2);assert!(svg.ends_with("</svg>"));}
