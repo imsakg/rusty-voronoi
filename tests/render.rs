@@ -1,4 +1,5 @@
 // Behavioral render tests.
+#[test] fn html_visualizer_is_self_contained_and_escapes_metadata() {let opts=SvgOptions{title:"</title><script>bad()</script>".into(),..Default::default()};let h=html(&diagram(),&opts).unwrap();assert!(h.starts_with("<!doctype html>"));assert!(h.contains("id=\"show-dual\""));assert!(h.contains("data-cell"));assert!(!h.contains("<script>bad()"));assert!(!h.contains("src=\"http"));}
 #[test] fn svg_options_escape_titles_and_control_layers() {let opts=SvgOptions{title:"<sites & cells>".into(),show_sites:false,show_labels:true,show_dual:true,..Default::default()};let s=svg_with_options(&diagram(),&opts).unwrap();assert!(s.contains("&lt;sites &amp; cells&gt;"));assert!(!s.contains("<circle "));assert_eq!(s.matches("<text ").count(),2);assert!(s.contains("data-layer=\"dual\""));let bad=SvgOptions{width:0,..Default::default()};assert!(svg_with_options(&diagram(),&bad).is_err());}
 use rusty_voronoi::{Diagram,geometry::{Point,Bounds},render::*};
 fn diagram()->Diagram {Diagram::build(vec![Point::new(2.,3.),Point::new(8.,7.)],Bounds::new(0.,0.,10.,10.).unwrap()).unwrap()}
