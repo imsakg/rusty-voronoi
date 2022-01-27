@@ -1,4 +1,16 @@
 //! Portable SVG, HTML and raster visualization.
+pub fn html(diagram:&Diagram,options:&SvgOptions)->Result<String,&'static str> {
+ let mut options=options.clone();options.show_dual=true;options.show_labels=true;options.show_sites=true;
+ let drawing=svg_with_options(diagram,&options)?;
+ Ok(format!(r##"<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{}</title>
+<style>body{{font:16px system-ui;margin:2rem auto;max-width:960px;background:#181818;color:#eee;padding:0 1rem}}svg{{width:100%;height:auto;background:#282828;border-radius:8px}}header{{display:flex;flex-wrap:wrap;gap:1rem;align-items:center}}polygon:hover{{filter:brightness(1.2);cursor:pointer}}output{{display:block;padding:1rem 0}}[data-layer="labels"]{{pointer-events:none}}</style>
+<body><h1>{}</h1><header><label><input type="checkbox" id="show-dual" checked> Dual edges</label><label><input type="checkbox" id="show-labels" checked> Site IDs</label><label><input type="checkbox" id="show-sites" checked> Sites</label></header><output id="selection" aria-live="polite">Select a cell to inspect its site ID.</output><main id="viewer">{}</main>
+<script>
+function layers(){{for(const [id,selector] of [['show-dual','[data-layer="dual"]'],['show-labels','[data-layer="labels"]'],['show-sites','circle']]){{for(const el of document.querySelectorAll(selector))el.style.display=document.getElementById(id).checked?'':'none';}}}}
+for(const input of document.querySelectorAll('header input'))input.addEventListener('change',layers);
+document.addEventListener('click',event=>{{const p=event.target.closest('[data-cell]');if(p)document.getElementById('selection').textContent='Cell '+p.dataset.cell;}});
+</script></body></html>"##,escape(&options.title),escape(&options.title),drawing))
+}
 #[derive(Debug,Clone)]
 pub struct SvgOptions {pub width:u32,pub height:u32,pub title:String,pub show_sites:bool,pub show_labels:bool,pub show_dual:bool}
 impl Default for SvgOptions {fn default()->Self{Self{width:800,height:800,title:"Voronoi diagram".into(),show_sites:true,show_labels:false,show_dual:false}}}
