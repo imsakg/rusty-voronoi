@@ -1,4 +1,13 @@
 //! Portable SVG, HTML and raster visualization.
+pub fn html_frames(frames:&[Diagram],options:&SvgOptions)->Result<String,&'static str> {
+ let first=frames.first().ok_or("at least one frame is required")?;
+ if frames.iter().any(|d|d.bounds()!=first.bounds()) {return Err("all frames must share bounds");}
+ let mut page=html(first,options)?;let mut controls=format!("<label>Insertion step <input id=\"step\" type=\"range\" min=\"0\" max=\"{}\" value=\"0\"></label>",frames.len()-1);
+ let mut options=options.clone();options.show_dual=true;options.show_labels=true;options.show_sites=true;
+ for(i,diagram) in frames.iter().enumerate(){controls.push_str(&format!("<template id=\"frame-{}\">{}</template>",i,svg_with_options(diagram,&options)?));}
+ controls.push_str(r#"<script>document.getElementById('step').addEventListener('input',event=>{const t=document.getElementById('frame-'+event.target.value);document.getElementById('viewer').replaceChildren(t.content.cloneNode(true));document.getElementById('selection').textContent='Insertion step '+event.target.value;layers();});</script>"#);
+ page=page.replace("</body>",&format!("{}</body>",controls));Ok(page)
+}
 pub fn html(diagram:&Diagram,options:&SvgOptions)->Result<String,&'static str> {
  let mut options=options.clone();options.show_dual=true;options.show_labels=true;options.show_sites=true;
  let drawing=svg_with_options(diagram,&options)?;
