@@ -1,4 +1,11 @@
 //! Portable SVG, HTML and raster visualization.
+pub fn ppm(diagram:&Diagram,width:u32,height:u32)->Result<Vec<u8>,&'static str> {
+ let pixels=u64::from(width)*u64::from(height);if width==0||height==0||pixels>16_000_000 {return Err("raster dimensions must contain 1..=16000000 pixels");}
+ let mut bytes=format!("P6\n{} {}\n255\n",width,height).into_bytes();let b=diagram.bounds();
+ const RGB:[[u8;3];7]=[[251,73,52],[184,187,38],[250,189,47],[131,165,152],[211,134,155],[142,192,124],[254,128,25]];
+ for y in 0..height {for x in 0..width {let p=Point::new(b.min().x+(f64::from(x)+0.5)*b.width()/f64::from(width),b.max().y-(f64::from(y)+0.5)*b.height()/f64::from(height));let color=diagram.locate(p).map(|i|RGB[i%RGB.len()]).unwrap_or([24,24,24]);bytes.extend_from_slice(&color);}}
+ Ok(bytes)
+}
 pub fn html_frames(frames:&[Diagram],options:&SvgOptions)->Result<String,&'static str> {
  let first=frames.first().ok_or("at least one frame is required")?;
  if frames.iter().any(|d|d.bounds()!=first.bounds()) {return Err("all frames must share bounds");}
