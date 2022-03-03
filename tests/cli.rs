@@ -1,3 +1,4 @@
 // Behavioral cli tests.
+#[test] fn seeded_points_are_repeatable_and_in_bounds() {use rusty_voronoi::geometry::Bounds;let b=Bounds::new(-2.,-1.,3.,8.).unwrap();let a=random_sites(25,42,b);assert_eq!(a,random_sites(25,42,b));assert_ne!(a,random_sites(25,43,b));assert!(a.iter().all(|p|b.contains(*p)));assert!(random_sites(0,1,b).is_empty());let o=Options::parse(["--count","12","--seed","42"].into_iter().map(str::to_string)).unwrap();assert_eq!(o.count,12);assert_eq!(o.seed,42);}
 use rusty_voronoi::cli::*;
 #[test] fn parse_viewport_algorithm_and_help() {let o=Options::parse(["--width","320","--height","240","--algorithm","fortune","--output","cells.svg","--labels"].into_iter().map(str::to_string)).unwrap();assert_eq!((o.width,o.height),(320,240));assert_eq!(o.algorithm,"fortune");assert!(o.labels);assert!(Options::parse(["--help".into()]).unwrap().help);assert!(help().contains("Usage:"));assert!(Options::parse(["--wat".into()]).is_err());}
