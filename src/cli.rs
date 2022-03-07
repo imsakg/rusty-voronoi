@@ -1,11 +1,17 @@
 //! Command-line parsing and deterministic data generation.
+pub fn random_sites(count:usize,seed:u64,bounds:crate::geometry::Bounds)->Vec<crate::geometry::Point> {
+ use rand::{Rng,SeedableRng};let mut rng=rand::rngs::StdRng::seed_from_u64(seed);
+ (0..count).map(|_|crate::geometry::Point::new(rng.gen_range(bounds.min().x..bounds.max().x),rng.gen_range(bounds.min().y..bounds.max().y))).collect()
+}
 #[derive(Debug,Clone)]
-pub struct Options {pub width:u32,pub height:u32,pub algorithm:String,pub output:String,pub labels:bool,pub dual:bool,pub help:bool}
-impl Default for Options {fn default()->Self{Self{width:800,height:800,algorithm:"clipping".into(),output:"voronoi.svg".into(),labels:false,dual:false,help:false}}}
+pub struct Options {pub count:usize,pub seed:u64,pub width:u32,pub height:u32,pub algorithm:String,pub output:String,pub labels:bool,pub dual:bool,pub help:bool}
+impl Default for Options {fn default()->Self{Self{count:32,seed:1,width:800,height:800,algorithm:"clipping".into(),output:"voronoi.svg".into(),labels:false,dual:false,help:false}}}
 impl Options {
  pub fn parse(args:impl IntoIterator<Item=String>)->Result<Self,String> {
   let mut options=Self::default();let mut args=args.into_iter();while let Some(arg)=args.next(){
    match arg.as_str(){
+    "--count"=>{options.count=args.next().ok_or("missing count")?.parse().map_err(|_|"invalid count")?;if options.count>1000{return Err("count must be <=1000".into());}},
+    "--seed"=>options.seed=args.next().ok_or("missing seed")?.parse().map_err(|_|"invalid seed")?,
     "--help"|"-h"=>options.help=true,"--labels"=>options.labels=true,"--dual"=>options.dual=true,
     "--width"|"--height"=>{let value=args.next().ok_or_else(||format!("missing value for {}",arg))?.parse::<u32>().map_err(|_|format!("invalid dimension for {}",arg))?;if value==0||value>100_000{return Err("dimensions must be 1..=100000".into());}if arg=="--width"{options.width=value;}else{options.height=value;}},
     "--output"|"-o"=>options.output=args.next().ok_or("missing output path")?,
