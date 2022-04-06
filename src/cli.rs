@@ -31,4 +31,4 @@ impl Options {
   }Ok(options)
  }
 }
-pub fn help()->&'static str {"Usage: rusty-voronoi [OPTIONS]\n  --width N --height N       Viewport dimensions (default 800)\n  --algorithm clipping|fortune\n  --output PATH             SVG, HTML or PPM path; - for stdout\n  --labels --dual           Show IDs and Delaunay overlay\n  --help                    Print help\n"}
+pub fn help()->&'static str {"Usage: rusty-voronoi [OPTIONS]\n  --width N --height N       Viewport dimensions (default 800)\n  --algorithm clipping|fortune\n  --output PATH             SVG, HTML or PPM path; - for stdout\n  --labels --dual           Show IDs and Delaunay overlay\n  --count N --seed N        Reproducible random sites (defaults 32, 1)\n  --sites PATH              CSV or whitespace coordinates\n  --relax N                 Lloyd iterations (0..=100)\n  --steps                   HTML insertion playback (<=200 sites)\n  --help                    Print help\n"}
