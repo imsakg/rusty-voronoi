@@ -61,7 +61,7 @@ impl Bounds {
 pub struct Bounds { min: Point, max: Point }
 impl Bounds {
     pub fn new(x0:f64,y0:f64,x1:f64,y1:f64)->Result<Self,&'static str> {
-        if ![x0,y0,x1,y1].iter().all(|v|v.is_finite()) || x1<=x0 || y1<=y0 { return Err("bounds must be finite with positive dimensions"); }
+        if ![x0,y0,x1,y1].iter().all(|v|v.is_finite()&&v.abs()<=1e100) || x1-x0<1e-100 || y1-y0<1e-100 { return Err("bounds require coordinates <=1e100 and extents >=1e-100"); }
         Ok(Self { min:Point::new(x0,y0),max:Point::new(x1,y1) })
     }
     pub fn min(self)->Point { self.min }
