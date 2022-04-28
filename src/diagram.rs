@@ -27,13 +27,13 @@ impl Diagram {
 impl Cell {
  pub fn centroid(&self)->Option<Point> {centroid(&self.vertices)}
  pub fn perimeter(&self)->f64 {self.vertices.iter().zip(self.vertices.iter().cycle().skip(1)).take(self.vertices.len()).map(|(a,b)|a.distance2(*b).sqrt()).sum()}
- pub fn contains(&self,point:Point)->bool {convex_contains(&self.vertices,point,1e-9)}
+ pub fn contains(&self,point:Point)->bool {{let extent=self.vertices.iter().fold((Point::new(f64::INFINITY,f64::INFINITY),Point::new(f64::NEG_INFINITY,f64::NEG_INFINITY)),|(a,b),p|(Point::new(a.x.min(p.x),a.y.min(p.y)),Point::new(b.x.max(p.x),b.y.max(p.y))));let scale=extent.0.distance2(extent.1);convex_contains(&self.vertices,point,64.*f64::EPSILON*scale)}}
 }
 impl Diagram {
  pub fn validate(&self,tolerance:f64)->Result<(),&'static str> {
   if !tolerance.is_finite()||tolerance<0. {return Err("invalid tolerance");}
   if self.sites.is_empty(){return Ok(());}
-  let scale=self.bounds.area().max(1.);
+  let scale=self.bounds.area();
   if (self.cells.iter().map(Cell::area).sum::<f64>()-self.bounds.area()).abs()>tolerance*scale {return Err("cell area does not cover bounds");}
   for cell in &self.cells {for &v in &cell.vertices {
    if !v.is_finite() {return Err("nonfinite cell vertex");}

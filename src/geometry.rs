@@ -21,8 +21,8 @@ fn clip_signed(polygon:&[Point],signed:impl Fn(Point)->f64)->Vec<Point> {
   if dc<=0. {out.push(current);}
   previous=current;dp=dc;
  }
- out.dedup_by(|a,b|a.distance2(*b)<=1e-24);
- if out.len()>1 && out[0].distance2(*out.last().unwrap())<=1e-24 {out.pop();}
+ out.dedup();
+ if out.len()>1 && out[0]==*out.last().unwrap() {out.pop();}
  out
 }
 pub fn convex_contains(points:&[Point],p:Point,epsilon:f64)->bool {
@@ -32,7 +32,7 @@ pub fn convex_contains(points:&[Point],p:Point,epsilon:f64)->bool {
  !(positive&&negative)
 }
 pub fn centroid(points:&[Point])->Option<Point> {
- let area=signed_area(points); if area.abs()<=f64::EPSILON {return None;}
+ let area=signed_area(points); if area==0. {return None;}
  let o=points[0]; let mut x=0.; let mut y=0.;
  for (a,b) in points.iter().zip(points.iter().cycle().skip(1)).take(points.len()) {
   let cross=(a.x-o.x)*(b.y-o.y)-(b.x-o.x)*(a.y-o.y);
