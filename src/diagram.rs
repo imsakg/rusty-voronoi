@@ -53,12 +53,15 @@ pub struct Edge {pub start:Point,pub end:Point,pub left:usize,pub right:Option<u
 impl Edge {pub fn length(self)->f64 {self.start.distance2(self.end).sqrt()}}
 impl Diagram {
  pub fn edges(&self)->Vec<Edge> {
-  let tolerance=1e-8*self.bounds.width().hypot(self.bounds.height()).powi(2).max(1.);
+  let scale=self.bounds.width().hypot(self.bounds.height());
   let mut edges=Vec::new();for cell in &self.cells {
    for (&start,&end) in cell.vertices.iter().zip(cell.vertices.iter().cycle().skip(1)).take(cell.vertices.len()) {
-    if start.distance2(end)<=1e-24 {continue;}
-    let mid=start.lerp(end,0.5);let owner=self.sites[cell.site];
-    let right=self.sites.iter().enumerate().filter(|(j,_)|*j!=cell.site).find(|(_,p)|(mid.distance2(**p)-mid.distance2(owner)).abs()<=tolerance).map(|(j,_)|j);
+    if start==end {continue;}
+    let owner=self.sites[cell.site];
+    let right=self.sites.iter().enumerate().filter(|(j,_)|*j!=cell.site).find(|(_,p)|{
+     let n=Point::new(p.x-owner.x,p.y-owner.y);let mid=owner.lerp(**p,0.5);let tolerance=64.*f64::EPSILON*n.x.hypot(n.y)*scale;
+     [start,end].iter().all(|v|(n.x*(v.x-mid.x)+n.y*(v.y-mid.y)).abs()<=tolerance)
+    }).map(|(j,_)|j);
     if right.is_none_or(|j|cell.site<j) {edges.push(Edge{start,end,left:cell.site,right});}
    }
   }edges
