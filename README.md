@@ -24,7 +24,7 @@ let mut diagram = Diagram::build(vec![Point::new(2.0, 5.0)], bounds)?;
 diagram.insert(Point::new(8.0, 5.0))?;
 assert_eq!(diagram.cells()[0].area(), 50.0);
 assert_eq!(diagram.neighbors(0), vec![1]);
-# Ok::<(), &'static str>(())
+
 ```
 
 ## Algorithms and limits
@@ -44,7 +44,7 @@ cargo test --all-targets --all-features
 cargo test --doc
 ```
 
-See [geometry](docs/GEOMETRY.md), [incremental construction](docs/INCREMENTAL.md), [Fortune](docs/FORTUNE.md), and the [implementation/history note](docs/IMPLEMENTATION.md).
+See the [API guide](docs/API.md), [geometry](docs/GEOMETRY.md), [incremental construction](docs/INCREMENTAL.md), [Fortune](docs/FORTUNE.md), and the [implementation/history note](docs/IMPLEMENTATION.md).
 
 ## References
 
