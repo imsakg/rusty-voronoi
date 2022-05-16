@@ -1,13 +1,93 @@
 // Behavioral geometry tests.
-#[test] fn unsafe_numeric_ranges_are_rejected_up_front() {assert!(Bounds::new(0.,0.,1e200,1.).is_err());assert!(Bounds::new(0.,0.,1e-200,1.).is_err());assert!(Bounds::new(0.,0.,1e-13,1e-13).is_ok());}
-#[test] fn circumcircle_handles_right_triangles_and_collinearity() {let (c,r)=circumcircle(Point::new(0.,0.),Point::new(2.,0.),Point::new(0.,2.)).unwrap();assert_eq!(c,Point::new(1.,1.)); assert!((r-2f64.sqrt()).abs()<1e-12);assert!(circumcircle(Point::new(0.,0.),Point::new(1.,0.),Point::new(2.,0.)).is_none());}
-#[test] fn bisectors_preserve_the_owner_half_plane() {let p=Bounds::new(0.,0.,10.,10.).unwrap().corners(); let a=Point::new(2.,5.);let b=Point::new(8.,5.);let left=clip_bisector(&p,a,b); assert_eq!(polygon_area(&left),50.);assert!(left.iter().all(|v|v.distance2(a)<=v.distance2(b)+1e-9)); assert_eq!(clip_bisector(&p,a,a),p);}
-#[test] fn half_plane_clipping_intersects_and_discards() {let p=Bounds::new(0.,0.,4.,4.).unwrap().corners(); let h=clip_halfplane(&p,Point::new(1.,0.),2.); assert_eq!(polygon_area(&h),8.); assert!(h.iter().all(|p|p.x<=2.)); assert!(clip_halfplane(&p,Point::new(1.,0.),-1.).is_empty()); assert!(clip_halfplane(&[],Point::new(1.,0.),0.).is_empty());}
-#[test] fn convex_contains_includes_edges_and_both_windings() {let p=Bounds::new(0.,0.,2.,2.).unwrap().corners(); assert!(convex_contains(&p,Point::new(1.,1.),1e-9)); assert!(convex_contains(&p,Point::new(0.,1.),1e-9)); assert!(!convex_contains(&p,Point::new(3.,1.),1e-9)); let r:Vec<_>=p.into_iter().rev().collect(); assert!(convex_contains(&r,Point::new(1.,1.),1e-9)); assert!(!convex_contains(&[],Point::new(0.,0.),1e-9));}
-#[test] fn polygon_centroid_is_not_the_vertex_average() { let p=vec![Point::new(0.,0.),Point::new(4.,0.),Point::new(0.,2.)]; let c=centroid(&p).unwrap(); assert!((c.x-4./3.).abs()<1e-12); assert!((c.y-2./3.).abs()<1e-12); assert!(centroid(&[]).is_none()); assert!(centroid(&[p[0],p[1]]).is_none()); }
-#[test] fn orientation_distinguishes_turns() { let a=Point::new(0.,0.); let b=Point::new(2.,0.); assert_eq!(orientation(a,b,Point::new(0.,1.)),2.); assert!(orientation(a,b,Point::new(0.,-1.))<0.); assert_eq!(orientation(a,b,Point::new(4.,0.)),0.); }
-#[test] fn shoelace_area_handles_winding_and_empty_input() { let p=Bounds::new(0.,0.,4.,3.).unwrap().corners(); assert_eq!(signed_area(&p),12.); let r:Vec<_>=p.iter().rev().copied().collect(); assert_eq!(signed_area(&r),-12.); assert_eq!(polygon_area(&r),12.); assert_eq!(polygon_area(&[]),0.); }
-#[test] fn rectangle_geometry_is_counterclockwise() { let b=Bounds::new(-1.,-2.,3.,4.).unwrap(); assert_eq!(b.width(),4.); assert_eq!(b.height(),6.); assert_eq!(b.area(),24.); assert!(b.contains(Point::new(3.,4.))); assert!(!b.contains(Point::new(4.,4.))); assert_eq!(b.corners()[0],Point::new(-1.,-2.)); }
+#[test]
+fn unsafe_numeric_ranges_are_rejected_up_front() {
+    assert!(Bounds::new(0., 0., 1e200, 1.).is_err());
+    assert!(Bounds::new(0., 0., 1e-200, 1.).is_err());
+    assert!(Bounds::new(0., 0., 1e-13, 1e-13).is_ok());
+}
+#[test]
+fn circumcircle_handles_right_triangles_and_collinearity() {
+    let (c, r) = circumcircle(Point::new(0., 0.), Point::new(2., 0.), Point::new(0., 2.)).unwrap();
+    assert_eq!(c, Point::new(1., 1.));
+    assert!((r - 2f64.sqrt()).abs() < 1e-12);
+    assert!(circumcircle(Point::new(0., 0.), Point::new(1., 0.), Point::new(2., 0.)).is_none());
+}
+#[test]
+fn bisectors_preserve_the_owner_half_plane() {
+    let p = Bounds::new(0., 0., 10., 10.).unwrap().corners();
+    let a = Point::new(2., 5.);
+    let b = Point::new(8., 5.);
+    let left = clip_bisector(&p, a, b);
+    assert_eq!(polygon_area(&left), 50.);
+    assert!(left.iter().all(|v| v.distance2(a) <= v.distance2(b) + 1e-9));
+    assert_eq!(clip_bisector(&p, a, a), p);
+}
+#[test]
+fn half_plane_clipping_intersects_and_discards() {
+    let p = Bounds::new(0., 0., 4., 4.).unwrap().corners();
+    let h = clip_halfplane(&p, Point::new(1., 0.), 2.);
+    assert_eq!(polygon_area(&h), 8.);
+    assert!(h.iter().all(|p| p.x <= 2.));
+    assert!(clip_halfplane(&p, Point::new(1., 0.), -1.).is_empty());
+    assert!(clip_halfplane(&[], Point::new(1., 0.), 0.).is_empty());
+}
+#[test]
+fn convex_contains_includes_edges_and_both_windings() {
+    let p = Bounds::new(0., 0., 2., 2.).unwrap().corners();
+    assert!(convex_contains(&p, Point::new(1., 1.), 1e-9));
+    assert!(convex_contains(&p, Point::new(0., 1.), 1e-9));
+    assert!(!convex_contains(&p, Point::new(3., 1.), 1e-9));
+    let r: Vec<_> = p.into_iter().rev().collect();
+    assert!(convex_contains(&r, Point::new(1., 1.), 1e-9));
+    assert!(!convex_contains(&[], Point::new(0., 0.), 1e-9));
+}
+#[test]
+fn polygon_centroid_is_not_the_vertex_average() {
+    let p = vec![Point::new(0., 0.), Point::new(4., 0.), Point::new(0., 2.)];
+    let c = centroid(&p).unwrap();
+    assert!((c.x - 4. / 3.).abs() < 1e-12);
+    assert!((c.y - 2. / 3.).abs() < 1e-12);
+    assert!(centroid(&[]).is_none());
+    assert!(centroid(&[p[0], p[1]]).is_none());
+}
+#[test]
+fn orientation_distinguishes_turns() {
+    let a = Point::new(0., 0.);
+    let b = Point::new(2., 0.);
+    assert_eq!(orientation(a, b, Point::new(0., 1.)), 2.);
+    assert!(orientation(a, b, Point::new(0., -1.)) < 0.);
+    assert_eq!(orientation(a, b, Point::new(4., 0.)), 0.);
+}
+#[test]
+fn shoelace_area_handles_winding_and_empty_input() {
+    let p = Bounds::new(0., 0., 4., 3.).unwrap().corners();
+    assert_eq!(signed_area(&p), 12.);
+    let r: Vec<_> = p.iter().rev().copied().collect();
+    assert_eq!(signed_area(&r), -12.);
+    assert_eq!(polygon_area(&r), 12.);
+    assert_eq!(polygon_area(&[]), 0.);
+}
+#[test]
+fn rectangle_geometry_is_counterclockwise() {
+    let b = Bounds::new(-1., -2., 3., 4.).unwrap();
+    assert_eq!(b.width(), 4.);
+    assert_eq!(b.height(), 6.);
+    assert_eq!(b.area(), 24.);
+    assert!(b.contains(Point::new(3., 4.)));
+    assert!(!b.contains(Point::new(4., 4.)));
+    assert_eq!(b.corners()[0], Point::new(-1., -2.));
+}
 use rusty_voronoi::geometry::*;
-#[test] fn bounds_validate_dimensions() { assert!(Bounds::new(0.,0.,10.,20.).is_ok()); assert!(Bounds::new(0.,0.,0.,1.).is_err()); assert!(Bounds::new(0.,0.,f64::NAN,1.).is_err()); }
-#[test] fn point_distance_is_symmetric() { let a=Point::new(1.,2.); let b=Point::new(-2.,6.); assert_eq!(a.distance2(b),25.); assert_eq!(b.distance2(a),25.); }
+#[test]
+fn bounds_validate_dimensions() {
+    assert!(Bounds::new(0., 0., 10., 20.).is_ok());
+    assert!(Bounds::new(0., 0., 0., 1.).is_err());
+    assert!(Bounds::new(0., 0., f64::NAN, 1.).is_err());
+}
+#[test]
+fn point_distance_is_symmetric() {
+    let a = Point::new(1., 2.);
+    let b = Point::new(-2., 6.);
+    assert_eq!(a.distance2(b), 25.);
+    assert_eq!(b.distance2(a), 25.);
+}

@@ -1,108 +1,338 @@
 //! Bounded polygon cells and incremental edits.
 impl Diagram {
- pub(crate) fn checked_candidates(sites:Vec<Point>,bounds:Bounds,pairs:&[(usize,usize)])->Result<(Self,usize),&'static str> {
-  let mut result=Self{sites,cells:Vec::new(),bounds};let mut repairs=0;
-  for (i,&owner) in result.sites.iter().enumerate() {
-   let mut vertices=bounds.corners();for &(a,b) in pairs {if a==i{vertices=clip_bisector(&vertices,owner,result.sites[b]);}else if b==i{vertices=clip_bisector(&vertices,owner,result.sites[a]);}}
-   for (j,&other) in result.sites.iter().enumerate() {if i==j {continue;}let n=Point::new(other.x-owner.x,other.y-owner.y);let mid=owner.lerp(other,0.5);
-    if vertices.iter().any(|p|n.x*(p.x-mid.x)+n.y*(p.y-mid.y)>0.) {vertices=clip_bisector(&vertices,owner,other);repairs+=1;}
-   }
-   result.cells.push(Cell{site:i,vertices});
-  }Ok((result,repairs))
- }
+    pub(crate) fn checked_candidates(
+        sites: Vec<Point>,
+        bounds: Bounds,
+        pairs: &[(usize, usize)],
+    ) -> Result<(Self, usize), &'static str> {
+        let mut result = Self {
+            sites,
+            cells: Vec::new(),
+            bounds,
+        };
+        let mut repairs = 0;
+        for (i, &owner) in result.sites.iter().enumerate() {
+            let mut vertices = bounds.corners();
+            for &(a, b) in pairs {
+                if a == i {
+                    vertices = clip_bisector(&vertices, owner, result.sites[b]);
+                } else if b == i {
+                    vertices = clip_bisector(&vertices, owner, result.sites[a]);
+                }
+            }
+            for (j, &other) in result.sites.iter().enumerate() {
+                if i == j {
+                    continue;
+                }
+                let n = Point::new(other.x - owner.x, other.y - owner.y);
+                let mid = owner.lerp(other, 0.5);
+                if vertices
+                    .iter()
+                    .any(|p| n.x * (p.x - mid.x) + n.y * (p.y - mid.y) > 0.)
+                {
+                    vertices = clip_bisector(&vertices, owner, other);
+                    repairs += 1;
+                }
+            }
+            result.cells.push(Cell { site: i, vertices });
+        }
+        Ok((result, repairs))
+    }
 }
 /// Incremental construction retaining a queryable diagram after every push.
-pub struct Builder {diagram:Diagram}
+pub struct Builder {
+    diagram: Diagram,
+}
 impl Builder {
- pub fn new(bounds:Bounds)->Self {Self{diagram:Diagram{sites:Vec::new(),cells:Vec::new(),bounds}}}
- pub fn push(&mut self,point:Point)->Result<usize,&'static str> {self.diagram.insert(point)}
- pub fn diagram(&self)->&Diagram {&self.diagram}
- pub fn finish(self)->Diagram {self.diagram}
+    pub fn new(bounds: Bounds) -> Self {
+        Self {
+            diagram: Diagram {
+                sites: Vec::new(),
+                cells: Vec::new(),
+                bounds,
+            },
+        }
+    }
+    pub fn push(&mut self, point: Point) -> Result<usize, &'static str> {
+        self.diagram.insert(point)
+    }
+    pub fn diagram(&self) -> &Diagram {
+        &self.diagram
+    }
+    pub fn finish(self) -> Diagram {
+        self.diagram
+    }
 }
 impl Diagram {
- pub fn relax(&self,iterations:usize)->Result<Self,&'static str> {
-  let mut diagram=self.clone();for _ in 0..iterations {let sites=diagram.cells.iter().map(|c|c.centroid().unwrap_or(diagram.sites[c.site])).collect();diagram=Self::build(sites,self.bounds)?;}Ok(diagram)
- }
+    pub fn relax(&self, iterations: usize) -> Result<Self, &'static str> {
+        let mut diagram = self.clone();
+        for _ in 0..iterations {
+            let sites = diagram
+                .cells
+                .iter()
+                .map(|c| c.centroid().unwrap_or(diagram.sites[c.site]))
+                .collect();
+            diagram = Self::build(sites, self.bounds)?;
+        }
+        Ok(diagram)
+    }
 }
 impl Cell {
- pub fn centroid(&self)->Option<Point> {centroid(&self.vertices)}
- pub fn perimeter(&self)->f64 {self.vertices.iter().zip(self.vertices.iter().cycle().skip(1)).take(self.vertices.len()).map(|(a,b)|a.distance2(*b).sqrt()).sum()}
- pub fn contains(&self,point:Point)->bool {{let extent=self.vertices.iter().fold((Point::new(f64::INFINITY,f64::INFINITY),Point::new(f64::NEG_INFINITY,f64::NEG_INFINITY)),|(a,b),p|(Point::new(a.x.min(p.x),a.y.min(p.y)),Point::new(b.x.max(p.x),b.y.max(p.y))));let scale=extent.0.distance2(extent.1);convex_contains(&self.vertices,point,64.*f64::EPSILON*scale)}}
+    pub fn centroid(&self) -> Option<Point> {
+        centroid(&self.vertices)
+    }
+    pub fn perimeter(&self) -> f64 {
+        self.vertices
+            .iter()
+            .zip(self.vertices.iter().cycle().skip(1))
+            .take(self.vertices.len())
+            .map(|(a, b)| a.distance2(*b).sqrt())
+            .sum()
+    }
+    pub fn contains(&self, point: Point) -> bool {
+        {
+            let extent = self.vertices.iter().fold(
+                (
+                    Point::new(f64::INFINITY, f64::INFINITY),
+                    Point::new(f64::NEG_INFINITY, f64::NEG_INFINITY),
+                ),
+                |(a, b), p| {
+                    (
+                        Point::new(a.x.min(p.x), a.y.min(p.y)),
+                        Point::new(b.x.max(p.x), b.y.max(p.y)),
+                    )
+                },
+            );
+            let scale = extent.0.distance2(extent.1);
+            convex_contains(&self.vertices, point, 64. * f64::EPSILON * scale)
+        }
+    }
 }
 impl Diagram {
- pub fn validate(&self,tolerance:f64)->Result<(),&'static str> {
-  if !tolerance.is_finite()||tolerance<0. {return Err("invalid tolerance");}
-  if self.sites.is_empty(){return Ok(());}
-  let scale=self.bounds.area();
-  if (self.cells.iter().map(Cell::area).sum::<f64>()-self.bounds.area()).abs()>tolerance*scale {return Err("cell area does not cover bounds");}
-  for cell in &self.cells {for &v in &cell.vertices {
-   if !v.is_finite() {return Err("nonfinite cell vertex");}
-   let margin=tolerance*self.bounds.width().max(self.bounds.height()).max(1.);
-   if v.x<self.bounds.min().x-margin||v.y<self.bounds.min().y-margin||v.x>self.bounds.max().x+margin||v.y>self.bounds.max().y+margin {return Err("cell vertex outside bounds");}
-   let owner=self.sites[cell.site];if self.sites.iter().any(|&p|v.distance2(owner)>v.distance2(p)+tolerance*scale){return Err("vertex violates nearest-site ownership");}
-  }}Ok(())
- }
+    pub fn validate(&self, tolerance: f64) -> Result<(), &'static str> {
+        if !tolerance.is_finite() || tolerance < 0. {
+            return Err("invalid tolerance");
+        }
+        if self.sites.is_empty() {
+            return Ok(());
+        }
+        let scale = self.bounds.area();
+        if (self.cells.iter().map(Cell::area).sum::<f64>() - self.bounds.area()).abs()
+            > tolerance * scale
+        {
+            return Err("cell area does not cover bounds");
+        }
+        for cell in &self.cells {
+            for &v in &cell.vertices {
+                if !v.is_finite() {
+                    return Err("nonfinite cell vertex");
+                }
+                let margin = tolerance * self.bounds.width().max(self.bounds.height()).max(1.);
+                if v.x < self.bounds.min().x - margin
+                    || v.y < self.bounds.min().y - margin
+                    || v.x > self.bounds.max().x + margin
+                    || v.y > self.bounds.max().y + margin
+                {
+                    return Err("cell vertex outside bounds");
+                }
+                let owner = self.sites[cell.site];
+                if self
+                    .sites
+                    .iter()
+                    .any(|&p| v.distance2(owner) > v.distance2(p) + tolerance * scale)
+                {
+                    return Err("vertex violates nearest-site ownership");
+                }
+            }
+        }
+        Ok(())
+    }
 }
 impl Diagram {
- pub fn neighbors(&self,index:usize)->Vec<usize> {let mut out=Vec::new();for e in self.edges(){if let Some(r)=e.right {if e.left==index {out.push(r);}else if r==index{out.push(e.left);}}}out.sort_unstable();out.dedup();out}
- /// Bounded dual adjacency, excluding zero-length cocircular contacts.
- pub fn delaunay_edges(&self)->Vec<(usize,usize)> {let mut pairs:Vec<_>=self.edges().into_iter().filter_map(|e|e.right.map(|r|(e.left,r))).collect();pairs.sort_unstable();pairs.dedup();pairs}
+    pub fn neighbors(&self, index: usize) -> Vec<usize> {
+        let mut out = Vec::new();
+        for e in self.edges() {
+            if let Some(r) = e.right {
+                if e.left == index {
+                    out.push(r);
+                } else if r == index {
+                    out.push(e.left);
+                }
+            }
+        }
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+    /// Bounded dual adjacency, excluding zero-length cocircular contacts.
+    pub fn delaunay_edges(&self) -> Vec<(usize, usize)> {
+        let mut pairs: Vec<_> = self
+            .edges()
+            .into_iter()
+            .filter_map(|e| e.right.map(|r| (e.left, r)))
+            .collect();
+        pairs.sort_unstable();
+        pairs.dedup();
+        pairs
+    }
 }
-#[derive(Debug,Clone,Copy,PartialEq)]
-pub struct Edge {pub start:Point,pub end:Point,pub left:usize,pub right:Option<usize>}
-impl Edge {pub fn length(self)->f64 {self.start.distance2(self.end).sqrt()}}
-impl Diagram {
- pub fn edges(&self)->Vec<Edge> {
-  let scale=self.bounds.width().hypot(self.bounds.height());
-  let mut edges=Vec::new();for cell in &self.cells {
-   for (&start,&end) in cell.vertices.iter().zip(cell.vertices.iter().cycle().skip(1)).take(cell.vertices.len()) {
-    if start==end {continue;}
-    let owner=self.sites[cell.site];
-    let right=self.sites.iter().enumerate().filter(|(j,_)|*j!=cell.site).find(|(_,p)|{
-     let n=Point::new(p.x-owner.x,p.y-owner.y);let mid=owner.lerp(**p,0.5);let tolerance=64.*f64::EPSILON*n.x.hypot(n.y)*scale;
-     [start,end].iter().all(|v|(n.x*(v.x-mid.x)+n.y*(v.y-mid.y)).abs()<=tolerance)
-    }).map(|(j,_)|j);
-    if right.is_none_or(|j|cell.site<j) {edges.push(Edge{start,end,left:cell.site,right});}
-   }
-  }edges
- }
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Edge {
+    pub start: Point,
+    pub end: Point,
+    pub left: usize,
+    pub right: Option<usize>,
+}
+impl Edge {
+    pub fn length(self) -> f64 {
+        self.start.distance2(self.end).sqrt()
+    }
 }
 impl Diagram {
- pub fn locate(&self,point:Point)->Option<usize> {
-  if !point.is_finite()||!self.bounds.contains(point){return None;}
-  self.sites.iter().enumerate().min_by(|(i,a),(j,b)|a.distance2(point).total_cmp(&b.distance2(point)).then(i.cmp(j))).map(|(i,_)|i)
- }
+    pub fn edges(&self) -> Vec<Edge> {
+        let scale = self.bounds.width().hypot(self.bounds.height());
+        let mut edges = Vec::new();
+        for cell in &self.cells {
+            for (&start, &end) in cell
+                .vertices
+                .iter()
+                .zip(cell.vertices.iter().cycle().skip(1))
+                .take(cell.vertices.len())
+            {
+                if start == end {
+                    continue;
+                }
+                let owner = self.sites[cell.site];
+                let right = self
+                    .sites
+                    .iter()
+                    .enumerate()
+                    .filter(|(j, _)| *j != cell.site)
+                    .find(|(_, p)| {
+                        let n = Point::new(p.x - owner.x, p.y - owner.y);
+                        let mid = owner.lerp(**p, 0.5);
+                        let tolerance = 64. * f64::EPSILON * n.x.hypot(n.y) * scale;
+                        [start, end]
+                            .iter()
+                            .all(|v| (n.x * (v.x - mid.x) + n.y * (v.y - mid.y)).abs() <= tolerance)
+                    })
+                    .map(|(j, _)| j);
+                if right.is_none_or(|j| cell.site < j) {
+                    edges.push(Edge {
+                        start,
+                        end,
+                        left: cell.site,
+                        right,
+                    });
+                }
+            }
+        }
+        edges
+    }
 }
 impl Diagram {
- /// Remove a canonical site; higher site indices are compacted.
- pub fn remove(&mut self,index:usize)->bool {
-  if index>=self.sites.len(){return false;}
-  let mut sites=self.sites.clone();sites.remove(index);*self=Self::build(sites,self.bounds).expect("retained sites were validated");true
- }
+    pub fn locate(&self, point: Point) -> Option<usize> {
+        if !point.is_finite() || !self.bounds.contains(point) {
+            return None;
+        }
+        self.sites
+            .iter()
+            .enumerate()
+            .min_by(|(i, a), (j, b)| {
+                a.distance2(point)
+                    .total_cmp(&b.distance2(point))
+                    .then(i.cmp(j))
+            })
+            .map(|(i, _)| i)
+    }
 }
 impl Diagram {
- pub fn insert(&mut self,point:Point)->Result<usize,&'static str> {
-  if !point.is_finite()||!self.bounds.contains(point) {return Err("site must be finite and inside the bounds");}
-  if let Some(i)=self.sites.iter().position(|p|*p==point){return Ok(i);}
-  let id=self.sites.len();let mut vertices=self.bounds.corners();
-  for cell in &mut self.cells {let other=self.sites[cell.site];cell.vertices=clip_bisector(&cell.vertices,other,point);vertices=clip_bisector(&vertices,point,other);}
-  self.sites.push(point);self.cells.push(Cell{site:id,vertices});Ok(id)
- }
+    /// Remove a canonical site; higher site indices are compacted.
+    pub fn remove(&mut self, index: usize) -> bool {
+        if index >= self.sites.len() {
+            return false;
+        }
+        let mut sites = self.sites.clone();
+        sites.remove(index);
+        *self = Self::build(sites, self.bounds).expect("retained sites were validated");
+        true
+    }
+}
+impl Diagram {
+    pub fn insert(&mut self, point: Point) -> Result<usize, &'static str> {
+        if !point.is_finite() || !self.bounds.contains(point) {
+            return Err("site must be finite and inside the bounds");
+        }
+        if let Some(i) = self.sites.iter().position(|p| *p == point) {
+            return Ok(i);
+        }
+        let id = self.sites.len();
+        let mut vertices = self.bounds.corners();
+        for cell in &mut self.cells {
+            let other = self.sites[cell.site];
+            cell.vertices = clip_bisector(&cell.vertices, other, point);
+            vertices = clip_bisector(&vertices, point, other);
+        }
+        self.sites.push(point);
+        self.cells.push(Cell { site: id, vertices });
+        Ok(id)
+    }
 }
 use crate::geometry::*;
-#[derive(Debug,Clone,PartialEq)]
-pub struct Cell {pub site:usize,pub vertices:Vec<Point>}
-impl Cell {pub fn area(&self)->f64 {polygon_area(&self.vertices)}}
-#[derive(Debug,Clone)]
-pub struct Diagram {sites:Vec<Point>,cells:Vec<Cell>,bounds:Bounds}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Cell {
+    pub site: usize,
+    pub vertices: Vec<Point>,
+}
+impl Cell {
+    pub fn area(&self) -> f64 {
+        polygon_area(&self.vertices)
+    }
+}
+#[derive(Debug, Clone)]
+pub struct Diagram {
+    sites: Vec<Point>,
+    cells: Vec<Cell>,
+    bounds: Bounds,
+}
 impl Diagram {
- pub fn build(sites:Vec<Point>,bounds:Bounds)->Result<Self,&'static str> {
-  if sites.iter().any(|p|!p.is_finite()||!bounds.contains(*p)) {return Err("sites must be finite and inside the bounds");}
-  let mut unique=Vec::new(); for p in sites {if !unique.contains(&p){unique.push(p);}} let sites=unique;
-  let cells=sites.iter().enumerate().map(|(i,&owner)|{let mut vertices=bounds.corners();for (j,&other) in sites.iter().enumerate(){if i!=j {vertices=clip_bisector(&vertices,owner,other);}}Cell{site:i,vertices}}).collect();
-  Ok(Self{sites,cells,bounds})
- }
- pub fn cells(&self)->&[Cell] {&self.cells}
- pub fn sites(&self)->&[Point] {&self.sites}
- pub fn bounds(&self)->Bounds {self.bounds}
+    pub fn build(sites: Vec<Point>, bounds: Bounds) -> Result<Self, &'static str> {
+        if sites.iter().any(|p| !p.is_finite() || !bounds.contains(*p)) {
+            return Err("sites must be finite and inside the bounds");
+        }
+        let mut unique = Vec::new();
+        for p in sites {
+            if !unique.contains(&p) {
+                unique.push(p);
+            }
+        }
+        let sites = unique;
+        let cells = sites
+            .iter()
+            .enumerate()
+            .map(|(i, &owner)| {
+                let mut vertices = bounds.corners();
+                for (j, &other) in sites.iter().enumerate() {
+                    if i != j {
+                        vertices = clip_bisector(&vertices, owner, other);
+                    }
+                }
+                Cell { site: i, vertices }
+            })
+            .collect();
+        Ok(Self {
+            sites,
+            cells,
+            bounds,
+        })
+    }
+    pub fn cells(&self) -> &[Cell] {
+        &self.cells
+    }
+    pub fn sites(&self) -> &[Point] {
+        &self.sites
+    }
+    pub fn bounds(&self) -> Bounds {
+        self.bounds
+    }
 }

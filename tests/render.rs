@@ -1,8 +1,73 @@
 // Behavioral render tests.
-#[test] fn ppm_has_exact_rgb_payload_and_rejects_excessive_allocations() {let bytes=ppm(&diagram(),3,2).unwrap();let header=b"P6\n3 2\n255\n";assert!(bytes.starts_with(header));assert_eq!(bytes.len(),header.len()+18);assert!(ppm(&diagram(),0,2).is_err());assert!(ppm(&diagram(),u32::MAX,u32::MAX).is_err());}
-#[test] fn incremental_frames_have_a_bounded_slider() {let first=diagram();let mut second=first.clone();second.insert(Point::new(5.,5.)).unwrap();let h=html_frames(&[first,second],&Default::default()).unwrap();assert!(h.contains("max=\"1\""));assert_eq!(h.matches("<template ").count(),2);assert!(html_frames(&[],&Default::default()).is_err());}
-#[test] fn html_visualizer_is_self_contained_and_escapes_metadata() {let opts=SvgOptions{title:"</title><script>bad()</script>".into(),..Default::default()};let h=html(&diagram(),&opts).unwrap();assert!(h.starts_with("<!doctype html>"));assert!(h.contains("id=\"show-dual\""));assert!(h.contains("data-cell"));assert!(!h.contains("<script>bad()"));assert!(!h.contains("src=\"http"));}
-#[test] fn svg_options_escape_titles_and_control_layers() {let opts=SvgOptions{title:"<sites & cells>".into(),show_sites:false,show_labels:true,show_dual:true,..Default::default()};let s=svg_with_options(&diagram(),&opts).unwrap();assert!(s.contains("&lt;sites &amp; cells&gt;"));assert!(!s.contains("<circle "));assert_eq!(s.matches("<text ").count(),2);assert!(s.contains("data-layer=\"dual\""));let bad=SvgOptions{width:0,..Default::default()};assert!(svg_with_options(&diagram(),&bad).is_err());}
-use rusty_voronoi::{Diagram,geometry::{Point,Bounds},render::*};
-fn diagram()->Diagram {Diagram::build(vec![Point::new(2.,3.),Point::new(8.,7.)],Bounds::new(0.,0.,10.,10.).unwrap()).unwrap()}
-#[test] fn svg_has_cells_sites_and_a_valid_root() {let svg=svg(&diagram()).unwrap();assert!(svg.starts_with("<svg xmlns="));assert_eq!(svg.matches("<polygon ").count(),2);assert_eq!(svg.matches("<circle ").count(),2);assert!(svg.ends_with("</svg>"));}
+#[test]
+fn ppm_has_exact_rgb_payload_and_rejects_excessive_allocations() {
+    let bytes = ppm(&diagram(), 3, 2).unwrap();
+    let header = b"P6\n3 2\n255\n";
+    assert!(bytes.starts_with(header));
+    assert_eq!(bytes.len(), header.len() + 18);
+    assert!(ppm(&diagram(), 0, 2).is_err());
+    assert!(ppm(&diagram(), u32::MAX, u32::MAX).is_err());
+}
+#[test]
+fn incremental_frames_have_a_bounded_slider() {
+    let first = diagram();
+    let mut second = first.clone();
+    second.insert(Point::new(5., 5.)).unwrap();
+    let h = html_frames(&[first, second], &Default::default()).unwrap();
+    assert!(h.contains("max=\"1\""));
+    assert_eq!(h.matches("<template ").count(), 2);
+    assert!(html_frames(&[], &Default::default()).is_err());
+}
+#[test]
+fn html_visualizer_is_self_contained_and_escapes_metadata() {
+    let opts = SvgOptions {
+        title: "</title><script>bad()</script>".into(),
+        ..Default::default()
+    };
+    let h = html(&diagram(), &opts).unwrap();
+    assert!(h.starts_with("<!doctype html>"));
+    assert!(h.contains("id=\"show-dual\""));
+    assert!(h.contains("data-cell"));
+    assert!(!h.contains("<script>bad()"));
+    assert!(!h.contains("src=\"http"));
+}
+#[test]
+fn svg_options_escape_titles_and_control_layers() {
+    let opts = SvgOptions {
+        title: "<sites & cells>".into(),
+        show_sites: false,
+        show_labels: true,
+        show_dual: true,
+        ..Default::default()
+    };
+    let s = svg_with_options(&diagram(), &opts).unwrap();
+    assert!(s.contains("&lt;sites &amp; cells&gt;"));
+    assert!(!s.contains("<circle "));
+    assert_eq!(s.matches("<text ").count(), 2);
+    assert!(s.contains("data-layer=\"dual\""));
+    let bad = SvgOptions {
+        width: 0,
+        ..Default::default()
+    };
+    assert!(svg_with_options(&diagram(), &bad).is_err());
+}
+use rusty_voronoi::{
+    geometry::{Bounds, Point},
+    render::*,
+    Diagram,
+};
+fn diagram() -> Diagram {
+    Diagram::build(
+        vec![Point::new(2., 3.), Point::new(8., 7.)],
+        Bounds::new(0., 0., 10., 10.).unwrap(),
+    )
+    .unwrap()
+}
+#[test]
+fn svg_has_cells_sites_and_a_valid_root() {
+    let svg = svg(&diagram()).unwrap();
+    assert!(svg.starts_with("<svg xmlns="));
+    assert_eq!(svg.matches("<polygon ").count(), 2);
+    assert_eq!(svg.matches("<circle ").count(), 2);
+    assert!(svg.ends_with("</svg>"));
+}

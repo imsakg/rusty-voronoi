@@ -10,9 +10,9 @@
 //! diagram.validate(1e-8)?;
 //! # Ok::<(), &'static str>(())
 //! ```
-pub mod geometry;
 pub mod cli;
-pub mod render;
-pub mod fortune;
 pub mod diagram;
-pub use diagram::{Diagram,Cell};
+pub mod fortune;
+pub mod geometry;
+pub mod render;
+pub use diagram::{Cell, Diagram};

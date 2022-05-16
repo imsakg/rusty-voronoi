@@ -1,18 +1,165 @@
 // Behavioral diagram tests.
-#[test] fn tiny_cells_retain_vertices_and_relative_ownership() {let b=Bounds::new(0.,0.,1e-13,1e-13).unwrap();let d=Diagram::build(vec![Point::new(2e-14,5e-14),Point::new(8e-14,5e-14)],b).unwrap();assert_eq!(d.cells()[0].vertices.len(),4);assert!((d.cells()[0].area()/b.area()-0.5).abs()<1e-8);assert!(!d.cells()[0].contains(Point::new(9e-14,5e-14)));assert!(!d.cells()[0].contains(Point::new(1e-3,5e-14)));assert!(d.cells()[0].centroid().is_some());d.validate(1e-8).unwrap();}
-#[test] fn near_distinct_sites_have_real_edges_not_distance_ties() {let b=Bounds::new(0.,0.,1.,1.).unwrap();let d=Diagram::build(vec![Point::new(0.5,0.5),Point::new(0.5+1e-10,0.5),Point::new(0.5+2e-10,0.5)],b).unwrap();assert_eq!(d.delaunay_edges(),vec![(0,1),(1,2)]);assert_eq!(d.neighbors(2),vec![1]);assert_eq!(d.edges().iter().filter(|e|e.right.is_none()).count(),8);}
-#[test] fn incremental_builder_matches_batch_construction() {let sites=vec![Point::new(1.,1.),Point::new(9.,1.),Point::new(4.,9.)];let mut b=rusty_voronoi::diagram::Builder::new(bounds());for &p in &sites {b.push(p).unwrap();assert!(b.diagram().validate(1e-8).is_ok());}let d=b.finish();let batch=Diagram::build(sites,bounds()).unwrap();for (a,b) in d.cells().iter().zip(batch.cells()){assert!((a.area()-b.area()).abs()<1e-8);}}
-#[test] fn lloyd_moves_sites_to_area_centroids() {let d=Diagram::build(vec![Point::new(1.,5.),Point::new(9.,5.)],bounds()).unwrap();let r=d.relax(1).unwrap();assert_eq!(r.sites(),&[Point::new(2.5,5.),Point::new(7.5,5.)]);assert_eq!(d.sites()[0],Point::new(1.,5.));assert_eq!(d.relax(0).unwrap().sites(),d.sites());r.validate(1e-8).unwrap();}
-#[test] fn cell_metrics_cover_centroid_perimeter_and_membership() {let d=Diagram::build(vec![Point::new(2.,5.),Point::new(8.,5.)],bounds()).unwrap();let c=&d.cells()[0];assert_eq!(c.centroid(),Some(Point::new(2.5,5.)));assert_eq!(c.perimeter(),30.);assert!(c.contains(Point::new(3.,4.)));assert!(!c.contains(Point::new(7.,4.)));}
-#[test] fn validate_checks_area_and_nearest_site_ownership() {let d=Diagram::build(vec![Point::new(1.,1.),Point::new(9.,1.),Point::new(5.,9.)],bounds()).unwrap();d.validate(1e-8).unwrap();assert!(d.validate(-1.).is_err());assert!(d.validate(f64::NAN).is_err());}
-#[test] fn neighbors_and_dual_edges_exclude_corner_contacts() {let d=Diagram::build(vec![Point::new(2.,2.),Point::new(8.,2.),Point::new(8.,8.),Point::new(2.,8.)],bounds()).unwrap();assert_eq!(d.neighbors(0),vec![1,3]);assert!(d.neighbors(9).is_empty());assert_eq!(d.delaunay_edges(),vec![(0,1),(0,3),(1,2),(2,3)]);}
-#[test] fn topology_has_one_shared_edge_and_six_boundary_edges() {let d=Diagram::build(vec![Point::new(2.,5.),Point::new(8.,5.)],bounds()).unwrap();let e=d.edges();assert_eq!(e.len(),7);let shared:Vec<_>=e.iter().filter(|e|e.right.is_some()).collect();assert_eq!(shared.len(),1);assert_eq!(shared[0].left,0);assert_eq!(shared[0].right,Some(1));assert!((shared[0].length()-10.).abs()<1e-9);}
-#[test] fn point_location_breaks_ties_by_site_index() {let d=Diagram::build(vec![Point::new(2.,5.),Point::new(8.,5.)],bounds()).unwrap();assert_eq!(d.locate(Point::new(5.,5.)),Some(0));assert_eq!(d.locate(Point::new(9.,1.)),Some(1));assert_eq!(d.locate(Point::new(11.,0.)),None);assert_eq!(d.locate(Point::new(f64::NAN,0.)),None);assert_eq!(Diagram::build(vec![],bounds()).unwrap().locate(Point::new(0.,0.)),None);}
-#[test] fn removal_restores_neighboring_area() {let mut d=Diagram::build(vec![Point::new(2.,5.),Point::new(8.,5.)],bounds()).unwrap();assert!(!d.remove(4));assert!(d.remove(0));assert_eq!(d.cells()[0].area(),100.);assert_eq!(d.sites(),&[Point::new(8.,5.)]);assert!(d.remove(0));assert!(d.cells().is_empty());}
-#[test] fn insertion_clips_existing_cells_incrementally() {let mut d=Diagram::build(vec![Point::new(2.,5.)],bounds()).unwrap();assert_eq!(d.insert(Point::new(8.,5.)).unwrap(),1);assert_eq!(d.cells()[0].area(),50.);assert_eq!(d.cells()[1].area(),50.);assert_eq!(d.insert(Point::new(8.,5.)).unwrap(),1);assert_eq!(d.cells().len(),2);let before=d.cells().to_vec();assert!(d.insert(Point::new(-1.,0.)).is_err());assert_eq!(d.cells(),before);}
-#[test] fn duplicate_sites_do_not_double_count_area() {let a=Point::new(2.,5.);let d=Diagram::build(vec![a,Point::new(8.,5.),a],bounds()).unwrap();assert_eq!(d.sites().len(),2);assert_eq!(d.cells().iter().map(|c|c.area()).sum::<f64>(),100.);}
-#[test] fn invalid_sites_are_rejected() {assert!(Diagram::build(vec![Point::new(f64::NAN,0.)],bounds()).is_err());assert!(Diagram::build(vec![Point::new(-1.,0.)],bounds()).is_err());}
-use rusty_voronoi::{Diagram,geometry::{Point,Bounds}};
-fn bounds()->Bounds {Bounds::new(0.,0.,10.,10.).unwrap()}
-#[test] fn one_site_owns_the_entire_viewport() {let d=Diagram::build(vec![Point::new(3.,4.)],bounds()).unwrap();assert_eq!(d.cells().len(),1);assert_eq!(d.cells()[0].area(),100.);assert_eq!(d.cells()[0].site,0);assert_eq!(d.bounds(),bounds());}
-#[test] fn empty_diagram_has_no_cells() {assert!(Diagram::build(vec![],bounds()).unwrap().cells().is_empty());}
+#[test]
+fn tiny_cells_retain_vertices_and_relative_ownership() {
+    let b = Bounds::new(0., 0., 1e-13, 1e-13).unwrap();
+    let d = Diagram::build(vec![Point::new(2e-14, 5e-14), Point::new(8e-14, 5e-14)], b).unwrap();
+    assert_eq!(d.cells()[0].vertices.len(), 4);
+    assert!((d.cells()[0].area() / b.area() - 0.5).abs() < 1e-8);
+    assert!(!d.cells()[0].contains(Point::new(9e-14, 5e-14)));
+    assert!(!d.cells()[0].contains(Point::new(1e-3, 5e-14)));
+    assert!(d.cells()[0].centroid().is_some());
+    d.validate(1e-8).unwrap();
+}
+#[test]
+fn near_distinct_sites_have_real_edges_not_distance_ties() {
+    let b = Bounds::new(0., 0., 1., 1.).unwrap();
+    let d = Diagram::build(
+        vec![
+            Point::new(0.5, 0.5),
+            Point::new(0.5 + 1e-10, 0.5),
+            Point::new(0.5 + 2e-10, 0.5),
+        ],
+        b,
+    )
+    .unwrap();
+    assert_eq!(d.delaunay_edges(), vec![(0, 1), (1, 2)]);
+    assert_eq!(d.neighbors(2), vec![1]);
+    assert_eq!(d.edges().iter().filter(|e| e.right.is_none()).count(), 8);
+}
+#[test]
+fn incremental_builder_matches_batch_construction() {
+    let sites = vec![Point::new(1., 1.), Point::new(9., 1.), Point::new(4., 9.)];
+    let mut b = rusty_voronoi::diagram::Builder::new(bounds());
+    for &p in &sites {
+        b.push(p).unwrap();
+        assert!(b.diagram().validate(1e-8).is_ok());
+    }
+    let d = b.finish();
+    let batch = Diagram::build(sites, bounds()).unwrap();
+    for (a, b) in d.cells().iter().zip(batch.cells()) {
+        assert!((a.area() - b.area()).abs() < 1e-8);
+    }
+}
+#[test]
+fn lloyd_moves_sites_to_area_centroids() {
+    let d = Diagram::build(vec![Point::new(1., 5.), Point::new(9., 5.)], bounds()).unwrap();
+    let r = d.relax(1).unwrap();
+    assert_eq!(r.sites(), &[Point::new(2.5, 5.), Point::new(7.5, 5.)]);
+    assert_eq!(d.sites()[0], Point::new(1., 5.));
+    assert_eq!(d.relax(0).unwrap().sites(), d.sites());
+    r.validate(1e-8).unwrap();
+}
+#[test]
+fn cell_metrics_cover_centroid_perimeter_and_membership() {
+    let d = Diagram::build(vec![Point::new(2., 5.), Point::new(8., 5.)], bounds()).unwrap();
+    let c = &d.cells()[0];
+    assert_eq!(c.centroid(), Some(Point::new(2.5, 5.)));
+    assert_eq!(c.perimeter(), 30.);
+    assert!(c.contains(Point::new(3., 4.)));
+    assert!(!c.contains(Point::new(7., 4.)));
+}
+#[test]
+fn validate_checks_area_and_nearest_site_ownership() {
+    let d = Diagram::build(
+        vec![Point::new(1., 1.), Point::new(9., 1.), Point::new(5., 9.)],
+        bounds(),
+    )
+    .unwrap();
+    d.validate(1e-8).unwrap();
+    assert!(d.validate(-1.).is_err());
+    assert!(d.validate(f64::NAN).is_err());
+}
+#[test]
+fn neighbors_and_dual_edges_exclude_corner_contacts() {
+    let d = Diagram::build(
+        vec![
+            Point::new(2., 2.),
+            Point::new(8., 2.),
+            Point::new(8., 8.),
+            Point::new(2., 8.),
+        ],
+        bounds(),
+    )
+    .unwrap();
+    assert_eq!(d.neighbors(0), vec![1, 3]);
+    assert!(d.neighbors(9).is_empty());
+    assert_eq!(d.delaunay_edges(), vec![(0, 1), (0, 3), (1, 2), (2, 3)]);
+}
+#[test]
+fn topology_has_one_shared_edge_and_six_boundary_edges() {
+    let d = Diagram::build(vec![Point::new(2., 5.), Point::new(8., 5.)], bounds()).unwrap();
+    let e = d.edges();
+    assert_eq!(e.len(), 7);
+    let shared: Vec<_> = e.iter().filter(|e| e.right.is_some()).collect();
+    assert_eq!(shared.len(), 1);
+    assert_eq!(shared[0].left, 0);
+    assert_eq!(shared[0].right, Some(1));
+    assert!((shared[0].length() - 10.).abs() < 1e-9);
+}
+#[test]
+fn point_location_breaks_ties_by_site_index() {
+    let d = Diagram::build(vec![Point::new(2., 5.), Point::new(8., 5.)], bounds()).unwrap();
+    assert_eq!(d.locate(Point::new(5., 5.)), Some(0));
+    assert_eq!(d.locate(Point::new(9., 1.)), Some(1));
+    assert_eq!(d.locate(Point::new(11., 0.)), None);
+    assert_eq!(d.locate(Point::new(f64::NAN, 0.)), None);
+    assert_eq!(
+        Diagram::build(vec![], bounds())
+            .unwrap()
+            .locate(Point::new(0., 0.)),
+        None
+    );
+}
+#[test]
+fn removal_restores_neighboring_area() {
+    let mut d = Diagram::build(vec![Point::new(2., 5.), Point::new(8., 5.)], bounds()).unwrap();
+    assert!(!d.remove(4));
+    assert!(d.remove(0));
+    assert_eq!(d.cells()[0].area(), 100.);
+    assert_eq!(d.sites(), &[Point::new(8., 5.)]);
+    assert!(d.remove(0));
+    assert!(d.cells().is_empty());
+}
+#[test]
+fn insertion_clips_existing_cells_incrementally() {
+    let mut d = Diagram::build(vec![Point::new(2., 5.)], bounds()).unwrap();
+    assert_eq!(d.insert(Point::new(8., 5.)).unwrap(), 1);
+    assert_eq!(d.cells()[0].area(), 50.);
+    assert_eq!(d.cells()[1].area(), 50.);
+    assert_eq!(d.insert(Point::new(8., 5.)).unwrap(), 1);
+    assert_eq!(d.cells().len(), 2);
+    let before = d.cells().to_vec();
+    assert!(d.insert(Point::new(-1., 0.)).is_err());
+    assert_eq!(d.cells(), before);
+}
+#[test]
+fn duplicate_sites_do_not_double_count_area() {
+    let a = Point::new(2., 5.);
+    let d = Diagram::build(vec![a, Point::new(8., 5.), a], bounds()).unwrap();
+    assert_eq!(d.sites().len(), 2);
+    assert_eq!(d.cells().iter().map(|c| c.area()).sum::<f64>(), 100.);
+}
+#[test]
+fn invalid_sites_are_rejected() {
+    assert!(Diagram::build(vec![Point::new(f64::NAN, 0.)], bounds()).is_err());
+    assert!(Diagram::build(vec![Point::new(-1., 0.)], bounds()).is_err());
+}
+use rusty_voronoi::{
+    geometry::{Bounds, Point},
+    Diagram,
+};
+fn bounds() -> Bounds {
+    Bounds::new(0., 0., 10., 10.).unwrap()
+}
+#[test]
+fn one_site_owns_the_entire_viewport() {
+    let d = Diagram::build(vec![Point::new(3., 4.)], bounds()).unwrap();
+    assert_eq!(d.cells().len(), 1);
+    assert_eq!(d.cells()[0].area(), 100.);
+    assert_eq!(d.cells()[0].site, 0);
+    assert_eq!(d.bounds(), bounds());
+}
+#[test]
+fn empty_diagram_has_no_cells() {
+    assert!(Diagram::build(vec![], bounds()).unwrap().cells().is_empty());
+}
