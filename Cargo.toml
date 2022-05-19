@@ -13,4 +13,4 @@ categories = ["algorithms", "mathematics", "visualization"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rand = "0.8.5"
+rand = "=0.8.5"
